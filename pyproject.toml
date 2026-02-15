@@ -1,0 +1,55 @@
+[project]
+name = "d3-mcp-server"
+version = "0.1.0"
+description = "MCP server providing D3.js API documentation"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "beautifulsoup4>=4.12.0",
+    "fastmcp>=3.0.0rc1",
+    "httpx>=0.28.1",
+    "markdownify>=1.2.2",
+    "pydantic>=2.12.5",
+]
+
+[project.scripts]
+d3-mcp-server = "d3_mcp_server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.0.0",
+    "ruff>=0.15.1",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "F",     # Pyflakes
+    "I",     # isort
+    "UP",    # pyupgrade
+    "B",     # flake8-bugbear
+    "SIM",   # flake8-simplify
+    "RUF",   # Ruff-specific rules
+    "PT",    # flake8-pytest-style
+    "PERF",  # Perflint
+    "S",     # flake8-bandit (security)
+    "N",     # pep8-naming
+    "C4",    # flake8-comprehensions
+    "ASYNC", # flake8-async
+    "PTH",   # flake8-use-pathlib
+    "TRY",   # tryceratops
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "E501"]
+
+[tool.ty.environment]
+python-version = "3.13"
+
+[tool.ty.rules]
+all = "warn"
