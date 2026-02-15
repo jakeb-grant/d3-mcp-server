@@ -2,6 +2,8 @@
 
 MCP server that provides D3.js API documentation to AI agents. Fetches docs from [d3js.org](https://d3js.org), converts HTML to clean markdown, and serves them through searchable tools.
 
+> **Note:** This project uses [FastMCP](https://gofastmcp.com) 3.0.0rc2, which is an unstable preview release. It will be upgraded to the stable 3.0 release once available.
+
 ## Setup
 
 Requires Python 3.13+ and [uv](https://docs.astral.sh/uv/).
