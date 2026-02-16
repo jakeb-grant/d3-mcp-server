@@ -1,6 +1,6 @@
 # d3-mcp-server
 
-MCP server that provides D3.js API documentation to AI agents. Fetches docs from [d3js.org](https://d3js.org), converts HTML to clean markdown, and serves them through searchable tools.
+MCP server that provides D3.js API documentation and example code to AI agents. Fetches docs from [d3js.org](https://d3js.org) and examples from the [Observable D3 gallery](https://observablehq.com/@d3/gallery), serving them through searchable tools.
 
 > **Note:** This project uses [FastMCP](https://gofastmcp.com) 3.0.0rc2, which is an unstable preview release. It will be upgraded to the stable 3.0 release once available.
 
@@ -65,6 +65,25 @@ search_docs("scaleLinear")              → searches across relevant modules
 search_docs("domain", "d3-scale")       → searches within d3-scale only
 ```
 
+### `find_example(query?, category?)`
+
+Browse and search ~170 D3 examples from the Observable gallery across 14 categories (Bars, Lines, Maps, Hierarchies, etc.).
+
+```
+find_example()                    → list all categories with counts
+find_example(query="treemap")     → search examples by keyword
+find_example(category="Bars")     → list all examples in a category
+```
+
+### `get_example(path)`
+
+Fetch example source code from an Observable notebook. Extracts clean, standalone D3 code from the notebook format, along with a description and data file URLs.
+
+```
+get_example("@d3/bar-chart/2")           → bar chart source code
+get_example("@d3/force-directed-graph/2") → force-directed graph source
+```
+
 ## Architecture
 
 ```
@@ -72,13 +91,15 @@ d3_mcp_server/
 ├── __init__.py    # Entry point (main)
 ├── server.py      # FastMCP server, tools, resource template
 ├── modules.py     # D3Module model + 30-module registry
+├── examples.py    # Observable gallery scraping + notebook code extraction
 ├── cache.py       # File cache (~/.cache/d3-mcp-server/) + HTML→markdown
 ├── search.py      # Module scoring + markdown section parsing/search
 └── sync.py        # Registry drift detection (see below)
 tests/
-├── test_search.py # Search, parsing, module resolution tests
-├── test_cache.py  # HTML conversion, caching, fetch error handling
-└── test_server.py # Tool integration tests
+├── test_examples.py # Gallery parsing, scoring, notebook extraction tests
+├── test_search.py   # Search, parsing, module resolution tests
+├── test_cache.py    # HTML conversion, caching, fetch error handling
+└── test_server.py   # Tool integration tests
 ```
 
 Doc pages are fetched from d3js.org, stripped to `<main class="main">` content, converted to markdown via markdownify, and cached to disk with a 24-hour TTL.
