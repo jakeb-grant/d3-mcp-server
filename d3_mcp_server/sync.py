@@ -29,7 +29,7 @@ def fetch_live_registry() -> dict[str, list[str]]:
     current_module: str | None = None
 
     for link in nav.find_all("a", href=True):
-        href = link["href"]
+        href = str(link["href"])
         if not href.startswith("/d3-"):
             continue
 

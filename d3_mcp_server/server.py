@@ -3,6 +3,11 @@ from fastmcp.exceptions import ToolError
 from fastmcp.server.context import Context
 
 from d3_mcp_server.cache import fetch_page
+from d3_mcp_server.examples import (
+    fetch_gallery,
+    fetch_notebook,
+    score_examples,
+)
 from d3_mcp_server.modules import (
     D3_MODULE_MAP,
     D3_MODULES,
@@ -129,6 +134,79 @@ async def search_docs(
         return f"No results for '{query}'."
 
     return "\n\n---\n\n".join(all_results)
+
+
+@mcp.tool
+async def find_example(
+    query: str | None = None,
+    category: str | None = None,
+    ctx: Context | None = None,
+) -> str:
+    """Find D3.js examples from the Observable gallery.
+
+    Without arguments, lists all categories with counts.
+    With query, returns top 10 matching examples.
+    With category, lists examples in that category.
+    """
+    examples = await fetch_gallery(ctx)
+
+    if not query and not category:
+        categories: dict[str, int] = {}
+        for ex in examples:
+            categories[ex.category] = categories.get(ex.category, 0) + 1
+        lines = [f"- **{cat}** ({count})" for cat, count in sorted(categories.items())]
+        return (
+            f"D3 example categories ({len(categories)}, "
+            f"{len(examples)} total examples):\n\n"
+            + "\n".join(lines)
+            + '\n\nUse `find_example(category="Bars")` to list examples in a category,'
+            + ' or `find_example(query="treemap")` to search.'
+        )
+
+    if category:
+        cat_lower = category.lower()
+        filtered = [ex for ex in examples if ex.category.lower() == cat_lower]
+        if not filtered:
+            cats = sorted({ex.category for ex in examples})
+            return f"Unknown category '{category}'. Available: {', '.join(cats)}"
+        lines = [f"- **{ex.title}** by {ex.author} — `{ex.path}`" for ex in filtered]
+        return (
+            f"Examples in '{filtered[0].category}' ({len(filtered)}):\n\n"
+            + "\n".join(lines)
+        )
+
+    assert query is not None
+    scored = score_examples(query, examples)
+    if not scored:
+        return f"No examples found matching '{query}'."
+
+    top = scored[:10]
+    lines = [
+        f"- **{ex.title}** [{ex.category}] (score {s}) — `{ex.path}`" for ex, s in top
+    ]
+    return (
+        f"Examples matching '{query}':\n\n"
+        + "\n".join(lines)
+        + "\n\nUse `get_example(path=...)` to get the source code."
+    )
+
+
+@mcp.tool
+async def get_example(
+    path: str,
+    ctx: Context | None = None,
+) -> str:
+    """Get D3.js example source code from an Observable notebook.
+
+    Provide the example path (e.g. "@d3/bar-chart/2").
+    Use find_example() to discover available examples.
+    """
+    path = path.strip()
+    if not path.startswith("@"):
+        path = f"@{path}"
+
+    content = await fetch_notebook(path, ctx)
+    return f"## Example: {path}\n\n{content}"
 
 
 @mcp.resource("d3-docs://{page_path}")
