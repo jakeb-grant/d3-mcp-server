@@ -4,6 +4,26 @@ from pydantic import BaseModel
 
 from d3_mcp_server.modules import D3Module
 
+# Split on camelCase boundaries: "scaleLinear" → ["scale", "Linear"]
+_CAMEL_RE = re.compile(r"[a-z]+|[A-Z][a-z]*")
+
+
+def _split_terms(query: str) -> list[str]:
+    """Split query into lowercase terms, decomposing camelCase.
+
+    "scaleLinear" → ["scale", "linear", "scalelinear"]
+    "bar chart"   → ["bar", "chart"]
+    """
+    words: list[str] = []
+    for token in query.split():
+        parts = [p.lower() for p in _CAMEL_RE.findall(token)]
+        if len(parts) > 1:
+            words.extend(parts)
+            words.append(token.lower())
+        else:
+            words.append(token.lower())
+    return words
+
 
 def score_modules(query: str, modules: list[D3Module]) -> list[tuple[D3Module, int]]:
     """Score modules against a search query.
@@ -12,7 +32,7 @@ def score_modules(query: str, modules: list[D3Module]) -> list[tuple[D3Module, i
     Weights: name (10), exact tag (3), description word (2),
     partial tag (1).
     """
-    terms = query.lower().split()
+    terms = _split_terms(query)
     results: list[tuple[D3Module, int]] = []
 
     for module in modules:

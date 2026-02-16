@@ -9,6 +9,7 @@ from fastmcp.server.context import Context
 from pydantic import BaseModel
 
 from d3_mcp_server.cache import CACHE_DIR, CACHE_TTL_SECONDS
+from d3_mcp_server.search import _split_terms
 
 GALLERY_URL = "https://observablehq.com/@d3/gallery"
 NOTEBOOK_API_URL = "https://api.observablehq.com"
@@ -136,7 +137,7 @@ def score_examples(
     Returns (example, score) pairs sorted by score descending.
     Weights: title word (10), category (3), path keyword (1).
     """
-    terms = query.lower().split()
+    terms = _split_terms(query)
     results: list[tuple[D3Example, int]] = []
 
     for example in examples:
@@ -304,6 +305,44 @@ def _find_named_cells(source: str) -> list[str]:
     return names
 
 
+# Matches module import definitions in define() section
+_MODULE_IMPORT_RE = re.compile(r'\.define\("(module \d+)".*?import\("(/[^"?]+)')
+
+# Matches helper imports that reference a module variable
+_HELPER_IMPORT_RE = re.compile(
+    r'\.define\("(\w+)",\s*\["(module \d+)".*?\.import\("(\w+)"'
+)
+
+OBSERVABLE_BASE_URL = "https://observablehq.com"
+
+
+def _extract_imports(source: str) -> dict[str, str]:
+    """Extract imported helper names and their source notebook URLs.
+
+    Returns {helper_name: observable_url}, e.g.
+    {"Legend": "https://observablehq.com/@d3/color-legend"}
+    """
+    # Build module variable → notebook path map
+    module_paths: dict[str, str] = {}
+    for match in _MODULE_IMPORT_RE.finditer(source):
+        module_var, path = match.groups()
+        # "/d3/color-legend.js" → "/@d3/color-legend"
+        clean = re.sub(r"\.js$", "", path)
+        if not clean.startswith("/@"):
+            clean = f"/@{clean.lstrip('/')}"
+        module_paths[module_var] = clean
+
+    # Map imported names to their source notebook
+    imports: dict[str, str] = {}
+    for match in _HELPER_IMPORT_RE.finditer(source):
+        defined_name, module_var, _imported_name = match.groups()
+        if module_var in module_paths:
+            notebook_path = module_paths[module_var]
+            imports[defined_name] = f"{OBSERVABLE_BASE_URL}{notebook_path}"
+
+    return imports
+
+
 def extract_notebook_code(source: str) -> str:
     """Parse an Observable notebook .js file and extract clean D3 code.
 
@@ -371,7 +410,14 @@ def extract_notebook_code(source: str) -> str:
     # 6. Assemble the result
     parts.append(f"```js\n{code}\n```")
 
-    # 7. Add data URLs if present
+    # 7. Add imported helpers
+    imports = _extract_imports(source)
+    if imports:
+        parts.append("**Imported helpers:**")
+        for name, url in imports.items():
+            parts.append(f"- `{name}` from [{url}]({url})")
+
+    # 8. Add data URLs if present
     if attachments:
         parts.append("**Data files:**")
         for name, url in attachments.items():

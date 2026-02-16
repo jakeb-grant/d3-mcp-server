@@ -9,6 +9,7 @@ from d3_mcp_server.examples import (
     _example_cache_path,
     _extract_description,
     _extract_file_attachments,
+    _extract_imports,
     extract_notebook_code,
     fetch_gallery,
     fetch_notebook,
@@ -229,6 +230,16 @@ class TestScoreExamples:
         results = score_examples("bar chart", sample_examples)
         assert results[0][0].path == "@d3/bar-chart/2"
 
+    def test_camel_case_splits(self, sample_examples: list[D3Example]) -> None:
+        results = score_examples("barChart", sample_examples)
+        assert len(results) > 0
+        assert results[0][0].path == "@d3/bar-chart/2"
+
+    def test_camel_case_line_chart(self, sample_examples: list[D3Example]) -> None:
+        results = score_examples("lineChart", sample_examples)
+        assert len(results) > 0
+        assert results[0][0].path == "@d3/line-chart/2"
+
 
 # --- Notebook code extraction tests ---
 
@@ -267,6 +278,49 @@ class TestExtractFileAttachments:
 
     def test_no_attachments(self) -> None:
         assert _extract_file_attachments("no file attachments here") == {}
+
+
+class TestExtractImports:
+    def test_extracts_imported_helper(self) -> None:
+        source = """
+export default function define(runtime, observer) {
+  const main = runtime.module();
+  main.define("module 1", async () => runtime.module((await import("/@d3/color-legend.js?v=4&resolutions=abc@123")).default));
+  main.define("Legend", ["module 1", "@variable"], (_, v) => v.import("Legend", _));
+  return main;
+}
+"""
+        imports = _extract_imports(source)
+        assert "Legend" in imports
+        assert "observablehq.com/@d3/color-legend" in imports["Legend"]
+
+    def test_multiple_imports(self) -> None:
+        source = """
+  main.define("module 1", async () => runtime.module((await import("/@d3/color-legend.js?v=4")).default));
+  main.define("module 2", async () => runtime.module((await import("/@d3/swatches.js?v=4")).default));
+  main.define("Legend", ["module 1", "@variable"], (_, v) => v.import("Legend", _));
+  main.define("Swatches", ["module 2", "@variable"], (_, v) => v.import("Swatches", _));
+"""
+        imports = _extract_imports(source)
+        assert len(imports) == 2
+        assert "Legend" in imports
+        assert "Swatches" in imports
+
+    def test_no_imports(self) -> None:
+        assert _extract_imports("no imports here") == {}
+
+    def test_included_in_notebook_output(self) -> None:
+        source = (
+            SAMPLE_NOTEBOOK_JS
+            + """
+  main.define("module 1", async () => runtime.module((await import("/@d3/color-legend.js?v=4")).default));
+  main.define("Legend", ["module 1", "@variable"], (_, v) => v.import("Legend", _));
+"""
+        )
+        result = extract_notebook_code(source)
+        assert "Imported helpers" in result
+        assert "Legend" in result
+        assert "observablehq.com/@d3/color-legend" in result
 
 
 class TestExtractNotebookCode:

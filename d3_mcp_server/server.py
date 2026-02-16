@@ -175,7 +175,9 @@ async def find_example(
             + "\n".join(lines)
         )
 
-    assert query is not None
+    if not query:
+        return "Provide a query or category to search examples."
+
     scored = score_examples(query, examples)
     if not scored:
         return f"No examples found matching '{query}'."
@@ -200,6 +202,14 @@ async def get_example(
 
     Provide the example path (e.g. "@d3/bar-chart/2").
     Use find_example() to discover available examples.
+
+    Code is extracted from Observable notebooks and may contain
+    Observable-specific patterns. For vanilla D3, adapt these:
+    - `invalidation` — remove or replace with cleanup logic
+    - `FileAttachment(...)` — use fetch/d3.csv/d3.json with
+      the data URLs listed below the code
+    - Imported helpers (e.g. `Legend`) — source notebook URLs
+      are listed; fetch or inline as needed
     """
     path = path.strip()
     if not path.startswith("@"):

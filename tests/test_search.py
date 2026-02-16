@@ -96,6 +96,16 @@ class TestScoreModules:
         results = score_modules("Graphical", sample_modules)
         assert results[0][0].name == "d3-shape"
 
+    def test_camel_case_splits(self, sample_modules: list[D3Module]) -> None:
+        results = score_modules("scaleLinear", sample_modules)
+        assert len(results) > 0
+        assert results[0][0].name == "d3-scale"
+
+    def test_camel_case_multi_word(self, sample_modules: list[D3Module]) -> None:
+        results = score_modules("scaleOrdinal", sample_modules)
+        assert len(results) > 0
+        assert results[0][0].name == "d3-scale"
+
 
 # --- Section parsing tests ---
 
