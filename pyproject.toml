@@ -3,10 +3,10 @@ name = "d3-mcp-server"
 version = "0.1.0"
 description = "MCP server providing D3.js API documentation"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "beautifulsoup4>=4.12.0",
-    "fastmcp>=3.0.0rc1",
+    "fastmcp>=3.0.0",
     "httpx>=0.28.1",
     "markdownify>=1.2.2",
     "pydantic>=2.12.5",
@@ -49,7 +49,7 @@ select = [
 "tests/**" = ["S101", "E501"]
 
 [tool.ty.environment]
-python-version = "3.13"
+python-version = "3.14"
 
 [tool.ty.rules]
 all = "warn"
