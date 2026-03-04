@@ -25,6 +25,14 @@ claude mcp add -t stdio -s user d3 -- uvx --from git+https://github.com/jakeb-gr
 }
 ```
 
+### Updating
+
+`uvx` caches the installed version. To pull the latest, clear the cache and re-run:
+
+```bash
+uv cache clean d3-mcp-server
+```
+
 ### MCP Inspector
 
 ```bash
